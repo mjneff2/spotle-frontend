@@ -4,7 +4,7 @@ import axios from 'axios'
 const Profile = () => {
     const [user, setUser] = useState(null)
     useEffect(() => {
-        const access_token = localStorage.getItem('access_token')
+        const access_token = localStorage.getItem('access_token').split(' ')[1]
         axios.post('http://localhost:8888/loggedin', {
             access_token
         }).then(response => {
