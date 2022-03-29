@@ -3,11 +3,13 @@ import axios from 'axios'
 import Profile from './Profile'
 
 const App = () => {
+  const [track, setTrack] = useState(null)
   const [audio, setAudio] = useState(null)
   const [tries, setTries] = useState(0)
   const [accessToken, setAccessToken] = useState(localStorage.getItem('access_token'))
+  const [revealed, setRevealed] = useState(false)
 
-  const loggedIn = (localStorage.getItem('access_token')) && (Date.now() - localStorage.getItem('access_token').split(' ')[0] < (1000 * 60 * 60))
+  const loggedIn = (accessToken && (Date.now() - accessToken.split(' ')[0] < (1000 * 60 * 60)))
 
   useEffect(() => {
     if (!loggedIn) {
@@ -19,8 +21,9 @@ const App = () => {
         console.log(res.data)
         // eslint-disable-next-line no-restricted-globals
         if (res.data.access_token) {
-          localStorage.setItem('access_token', Date.now() + ' ' + res.data.access_token)
-          setAccessToken(res.data.access_token)
+          const tokenWithDate = Date.now() + ' ' + res.data.access_token
+          localStorage.setItem('access_token', tokenWithDate)
+          setAccessToken(tokenWithDate)
         }
       })
     } else {
@@ -29,10 +32,11 @@ const App = () => {
       })
       .then(res => {
         console.log(res)
+        setTrack(res.data)
         setAudio(new Audio(res.data.preview_url))
       })
     }
-  }, [loggedIn])
+  }, [accessToken, loggedIn])
 
   const start = () => {
     audio.play()
@@ -41,24 +45,36 @@ const App = () => {
     audio.currentTime = 0
   }
 
-  console.log(loggedIn)
-  console.log(localStorage.getItem('access_token'))
+  const handleLogout = () => {
+    setAccessToken(null)
+    localStorage.removeItem('access_token')
+  }
 
-  return (
-    <div>
-      <Profile />
-      {!loggedIn && <a href={'https://accounts.spotify.com/authorize?' +
+  console.log(loggedIn)
+  console.log(accessToken)
+
+  if (!loggedIn) {
+    return (
+      <a href={'https://accounts.spotify.com/authorize?' +
       (new URLSearchParams({
           response_type: 'code',
           client_id: '8f9a74e7f1e047f5b7bc91dd53752e5d',
           scope: 'user-top-read',
           redirect_uri: 'http://localhost:3000',
           state: 'test_state'
-      })).toString()}>Spotify Login</a>}
-      <p>Attempt: {tries + 1}</p>
-      <button onClick={start}>Play</button>
-    </div>
-  );
+      })).toString()}>Spotify Login</a>
+    )
+  } else {
+    return (
+      <div>
+        <Profile />
+        <button onClick={handleLogout}>Log Out</button>
+        <p>Attempt: {tries + 1}</p>
+        <button onClick={start}>Play</button>
+        {revealed ? <p>{track.name + ' ' + track.artists[0].name}</p> : <button onClick={() => setRevealed(true)}>Reveal Song</button>}
+      </div>
+    );
+  }
 }
 
 export default App;
