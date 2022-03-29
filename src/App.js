@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import Profile from './Profile'
+import GuessBar from './GuessBar'
 
 const App = () => {
   const [track, setTrack] = useState(null)
@@ -72,6 +73,8 @@ const App = () => {
         <p>Attempt: {tries + 1}</p>
         <button onClick={start}>Play</button>
         {revealed ? <p>{track.name + ' ' + track.artists[0].name}</p> : <button onClick={() => setRevealed(true)}>Reveal Song</button>}
+        <br />
+        <GuessBar accessToken={accessToken.split(' ')[1]} onGuess={(guessedTrack) => guessedTrack.uri === track.uri ? alert('SO TRUE!') : alert('wrong bitvh')}/>
       </div>
     );
   }
