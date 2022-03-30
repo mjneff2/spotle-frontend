@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-import Profile from './Profile'
-import GuessBar from './GuessBar'
+import loginService from './services/login'
+import trackService from './services/track'
+import searchService from './services/search'
+import userService from './services/user'
+import Profile from './components/Profile'
+import GuessBar from './components/GuessBar'
 
 const App = () => {
   const [track, setTrack] = useState(null)
@@ -12,30 +15,26 @@ const App = () => {
 
   const loggedIn = (accessToken && (Date.now() - accessToken.split(' ')[0] < (1000 * 60 * 60)))
 
-  useEffect(() => {
+  if (loggedIn) {
+    trackService.setToken(accessToken.split(' ')[1])
+    searchService.setToken(accessToken.split(' ')[1])
+    userService.setToken(accessToken.split(' ')[1])
+  }
+
+  useEffect(async () => {
     if (!loggedIn) {
-      axios.post('http://localhost:8888/login', {
-        // eslint-disable-next-line no-restricted-globals
-        pageUrl: location.href
-      })
-      .then(res => {
-        console.log(res.data)
-        // eslint-disable-next-line no-restricted-globals
-        if (res.data.access_token) {
-          const tokenWithDate = Date.now() + ' ' + res.data.access_token
-          localStorage.setItem('access_token', tokenWithDate)
-          setAccessToken(tokenWithDate)
-        }
-      })
+      const res = await loginService.login(location.href)
+      console.log(res)
+      if (res.access_token) {
+        const tokenWithDate = Date.now() + ' ' + res.access_token
+        localStorage.setItem('access_token', tokenWithDate)
+        setAccessToken(tokenWithDate)
+      }
     } else {
-      axios.post('http://localhost:8888/track', {
-        access_token: accessToken.split(' ')[1]
-      })
-      .then(res => {
-        console.log(res)
-        setTrack(res.data)
-        setAudio(new Audio(res.data.preview_url))
-      })
+      const res = await trackService.getTrack()
+      console.log(res)
+      setTrack(res)
+      setAudio(new Audio(res.preview_url))
     }
   }, [accessToken, loggedIn])
 
@@ -58,11 +57,11 @@ const App = () => {
     return (
       <a href={'https://accounts.spotify.com/authorize?' +
       (new URLSearchParams({
-          response_type: 'code',
-          client_id: '8f9a74e7f1e047f5b7bc91dd53752e5d',
-          scope: 'user-top-read',
-          redirect_uri: 'http://localhost:3000',
-          state: 'test_state'
+        response_type: 'code',
+        client_id: '8f9a74e7f1e047f5b7bc91dd53752e5d',
+        scope: 'user-top-read',
+        redirect_uri: 'http://localhost:3000',
+        state: 'test_state'
       })).toString()}>Spotify Login</a>
     )
   } else {
@@ -72,12 +71,19 @@ const App = () => {
         <button onClick={handleLogout}>Log Out</button>
         <p>Attempt: {tries + 1}</p>
         <button onClick={start}>Play</button>
-        {revealed ? <p>{track.name + ' ' + track.artists[0].name}</p> : <button onClick={() => setRevealed(true)}>Reveal Song</button>}
+        {revealed
+          ? <p>{track.name + ' ' + track.artists[0].name}</p>
+          : <button onClick={() => setRevealed(true)}>Reveal Song</button>}
         <br />
-        <GuessBar accessToken={accessToken.split(' ')[1]} onGuess={(guessedTrack) => guessedTrack.uri === track.uri ? alert('SO TRUE!') : alert('wrong bitvh')}/>
+        <GuessBar onGuess={(guessedTrack) => (
+          ((guessedTrack.name === track.name)
+          && (guessedTrack.artists[0].name === track.artists[0].name))
+            ? alert('SO TRUE!')
+            : alert('wrong bitvh')
+        )}/>
       </div>
-    );
+    )
   }
 }
 
-export default App;
+export default App
